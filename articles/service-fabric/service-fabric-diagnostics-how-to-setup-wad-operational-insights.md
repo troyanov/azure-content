@@ -192,7 +192,7 @@ Once you have created the Operational Insights workspace as described above, the
 
 ```powershell
 
-    <#
+        <#
     This script will configure an Operations Management Suite workspace (aka Operational Insights workspace) to read Diagnostics from an Azure Storage account.
 
     It will enable all supported data types (currently Windows Event Logs, Syslog, Service Fabric Events, ETW Events and IIS Logs).
@@ -204,9 +204,7 @@ Once you have created the Operational Insights workspace as described above, the
     If you have more than one storage account you will be prompted for which storage account to configure.
     #>
 
-Add-AzureAccount
-
-Switch-AzureMode -Name AzureResourceManager
+Login-AzureRmAccount
 
 $validTables = "WADServiceFabric*EventTable", "WADETWEventTable"
 
@@ -214,7 +212,7 @@ function Select-Workspace {
 
     $workspace = ""
 
-    $allWorkspaces = Get-AzureOperationalInsightsWorkspace  
+    $allWorkspaces = Get-AzureRmOperationalInsightsWorkspace  
 
     switch ($allWorkspaces.Count) {
         0 {Write-Error "No Operations Management Suite workspaces found"}
@@ -238,7 +236,7 @@ function Select-StorageAccount {
 
     $storage = ""
 
-    $allStorageAccounts = (get-azureresource -ResourceType Microsoft.ClassicStorage/storageAccounts) + (get-azureresource -ResourceType Microsoft.Storage/storageAccounts)
+    $allStorageAccounts = (Find-AzureRmResource -ResourceType Microsoft.ClassicStorage/storageAccounts) + (Find-AzureRmResource -ResourceType Microsoft.Storage/storageAccounts)
 
     switch ($allStorageAccounts.Count) {
         0 {Write-Error "No storage accounts found"}
@@ -269,7 +267,7 @@ $existingConfig = ""
 
 try
 {
-    $existingConfig = Get-AzureOperationalInsightsStorageInsight -Workspace $workspace -Name $insightsName -ErrorAction Stop
+    $existingConfig = Get-AzureRmOperationalInsightsStorageInsight -Workspace $workspace -Name $insightsName -ErrorAction Stop
 }
 catch [Hyak.Common.CloudException]
 {
@@ -277,17 +275,15 @@ catch [Hyak.Common.CloudException]
 }
 
 if ($existingConfig) {
-    Set-AzureOperationalInsightsStorageInsight -Workspace $workspace -Name $insightsName -Tables $validTables -Containers $validContainers
+    Set-AzureRmOperationalInsightsStorageInsight -Workspace $workspace -Name $insightsName -Tables $validTables -Containers $validContainers
 
 } else {
     if ($storageAccount.ResourceType -eq "Microsoft.ClassicStorage/storageAccounts") {
-        Switch-AzureMode -Name AzureServiceManagement
-        $key = (Get-AzureStorageKey -StorageAccountName $storageAccount.Name).Primary
-        Switch-AzureMode -Name AzureResourceManager
+        $key = (Get-AzureRmStorageKey -StorageAccountName $storageAccount.Name).Primary
     } else {
-        $key = (Get-AzureStorageAccountKey -ResourceGroupName $storageAccount.ResourceGroupName -Name $storageAccount.Name).Key1
+        $key = (Get-AzureRmStorageAccountKey -ResourceGroupName $storageAccount.ResourceGroupName -Name $storageAccount.Name).Key1
     }
-    New-AzureOperationalInsightsStorageInsight -Workspace $workspace -Name $insightsName -StorageAccountResourceId $storageAccount.ResourceId -StorageAccountKey $key -Tables $validTables -Containers $validContainers
+    New-AzureRmOperationalInsightsStorageInsight -Workspace $workspace -Name $insightsName -StorageAccountResourceId $storageAccount.ResourceId -StorageAccountKey $key -Tables $validTables -Containers $validContainers
 }
 ```
 
